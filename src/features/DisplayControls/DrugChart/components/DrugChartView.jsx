@@ -24,6 +24,8 @@ import { FormattedMessage } from "react-intl";
 import { AllMedicationsContext } from "../../../../context/AllMedications";
 import "../styles/DrugChartView.scss";
 import { IPDContext } from "../../../../context/IPDContext";
+import { SliderContext } from "../../../../context/SliderContext";
+import { DrugChartSlotContext } from "../../../../context/DrugChartSlotContext";
 import {
   ForbiddenErrorMessage,
   GenericErrorMessage,
@@ -32,6 +34,9 @@ import {
   timeFormatFor12Hr,
 } from "../../../../constants";
 import WarningIcon from "../../../../icons/warning.svg";
+import DrugChartNoteAmendmentSlider from "../../../DrugChartNoteAmendment/components/DrugChartNoteAmendmentSlider";
+import DrugChartNoteAcknowledgementSlider from "../../../DrugChartNoteAcknowledgement/components/DrugChartNoteAcknowledgementSlider";
+import { SideBarPanelClose } from "../../../SideBarPanel/components/SideBarPanelClose";
 
 const NoMedicationTaskMessage = (
   <FormattedMessage
@@ -43,6 +48,12 @@ const NoMedicationTaskMessage = (
 export default function DrugChartWrapper(props) {
   const { patientId } = props;
   const { config, isReadMode, visitSummary, visit } = useContext(IPDContext);
+  const {
+    isSliderOpen,
+    updateSliderOpen,
+    sliderContentModified,
+    setSliderContentModified,
+  } = useContext(SliderContext);
   const {
     shiftDetails: shiftConfig = {},
     drugChart = {},
@@ -80,6 +91,124 @@ export default function DrugChartWrapper(props) {
   const shiftRangeArray = shiftDetails.rangeArray;
   const [shiftIndex, updateShiftIndex] = useState(shiftDetails.shiftIndex);
   const [notCurrentShift, setNotCurrentShift] = useState(false);
+  const [selectedSlotData, setSelectedSlotData] = useState(null);
+  const [showWarningNotification, setShowWarningNotification] = useState(false);
+
+  const updateAmendmentSlider = (value) => {
+    updateSliderOpen((prev) => {
+      return {
+        ...prev,
+        drugChartNoteAmendment: value,
+      };
+    });
+  };
+
+  const sliderCloseActions = {
+    onCancel: () => {
+      setShowWarningNotification(false);
+      updateAmendmentSlider(false);
+    },
+    onClose: () => {
+      setShowWarningNotification(false);
+    },
+  };
+
+  const amendmentSliderActions = {
+    onModalClose: () => {
+      sliderContentModified.drugChartNoteAmendment
+        ? setShowWarningNotification(true)
+        : updateAmendmentSlider(false);
+    },
+    onModalCancel: () => {
+      sliderContentModified.drugChartNoteAmendment
+        ? setShowWarningNotification(true)
+        : updateAmendmentSlider(false);
+    },
+  };
+
+  const handleSlotClick = (slot, rowData) => {
+    // Only allow clicking on administered/not-administered statuses
+    const clickableStatuses = ["Administered", "Administered-Late", "Not-Administered"];
+    if (!clickableStatuses.includes(slot.administrationSummary?.status)) {
+      return;
+    }
+
+    setSelectedSlotData({
+      slot,
+      drugName: rowData.name,
+      scheduledTime: formatDate(slot.startTime * 1000, displayShiftTimingsFormat),
+      status: slot.administrationSummary?.status,
+      performerName: slot.administrationSummary?.performerName,
+      existingNotes: slot.administrationSummary?.notes,
+      medicationAdministrationNoteUUID: slot.medicationAdministration?.notes?.[0]?.uuid,
+    });
+
+    setSliderContentModified((prevState) => ({
+      ...prevState,
+      drugChartNoteAmendment: false,
+    }));
+
+    updateAmendmentSlider(true);
+  };
+
+//Trial for acknowledgement in drug chart slot
+  const updateAcknowledgementSlider = (value) => {
+    updateSliderOpen((prev) => {
+      return {
+        ...prev,
+        drugChartNoteAcknowledgement: value,
+      };
+    });
+  };
+
+  const acknowledgementSliderCloseActions= {
+    onCancel: () => {
+      setShowWarningNotification(false);
+      updateAcknowledgementSlider(false);
+    },
+    onClose: () => {
+      setShowWarningNotification(false);
+    },
+  };
+
+  const acknowledgementSliderActions = {
+    onModalClose: () => {
+      sliderContentModified.drugChartNoteAcknowledgement
+        ? setShowWarningNotification(true)
+        : updateAcknowledgementSlider(false);
+    },
+    onModalCancel: () => {
+      sliderContentModified.drugChartNoteAcknowledgement
+        ? setShowWarningNotification(true)
+        : updateAcknowledgementSlider(false);
+    },
+  };
+
+  const handleSlotClickForAcknowledgement = (slot, rowData) => {
+    // Only allow clicking on administered/not-administered statuses
+    const clickableStatuses = ["Administered", "Administered-Late", "Not-Administered"];
+    if (!clickableStatuses.includes(slot.administrationSummary?.status)) {
+      return;
+    }
+
+    setSelectedSlotData({
+      slot,
+      drugName: rowData.name,
+      scheduledTime: formatDate(slot.startTime * 1000, displayShiftTimingsFormat),
+      status: slot.administrationSummary?.status,
+      performerName: slot.administrationSummary?.performerName,
+      existingNotes: slot.administrationSummary?.notes,
+      medicationAdministrationNoteUUID: slot.medicationAdministration?.notes?.[0]?.uuid,
+    });
+
+    setSliderContentModified((prevState) => ({
+      ...prevState,
+      drugChartNoteAcknowledgement: false,
+    }));
+
+    updateAcknowledgementSlider(true);
+  };
+
 
   const callFetchMedications = async (startDateTime, endDateTime) => {
     const startDateTimeInSeconds = startDateTime / 1000;
@@ -320,11 +449,69 @@ export default function DrugChartWrapper(props) {
           {errorMessage ? errorMessage : NoMedicationTaskMessage}
         </div>
       ) : (
-        <DrugChart
-          drugChartData={transformedData}
-          currentShiftArray={currentShiftArray}
-          selectedDate={startEndDates.startDate}
-          shiftIndex={shiftIndex}
+        // <DrugChartSlotContext.Provider value={{ 
+        //   onSlotClick: handleSlotClick 
+        //   , onSlotClickForAcknowledgement: handleSlotClickForAcknowledgement}}>
+        <DrugChartSlotContext.Provider value={{ 
+          onSlotClick: handleSlotClickForAcknowledgement}}>
+          <DrugChart
+            drugChartData={transformedData}
+            currentShiftArray={currentShiftArray}
+            selectedDate={startEndDates.startDate}
+            shiftIndex={shiftIndex}
+          />
+        </DrugChartSlotContext.Provider>
+      )}
+      {isSliderOpen?.drugChartNoteAmendment && (
+        <DrugChartNoteAmendmentSlider
+          hostData={selectedSlotData}
+          hostApi={amendmentSliderActions}
+        />
+      )}
+      {/* Add this new condition for acknowledgement slider */}
+      {isSliderOpen?.drugChartNoteAcknowledgement && (
+      <DrugChartNoteAcknowledgementSlider
+      hostData={selectedSlotData}
+      hostApi={acknowledgementSliderActions}
+      />
+      )}
+      {showWarningNotification && drugChartNoteAmendment && (
+        <SideBarPanelClose
+          className="warning-notification"
+          open={true}
+          message={
+            <FormattedMessage
+              id="AMENDMENT_WARNING_TEXT"
+              defaultMessage="You will lose the details entered. Do you want to continue?"
+            />
+          }
+          label={""}
+          primaryButtonText={<FormattedMessage id="NO" defaultMessage="No" />}
+          secondaryButtonText={
+            <FormattedMessage id="YES" defaultMessage="Yes" />
+          }
+          onSubmit={sliderCloseActions.onClose}
+          onSecondarySubmit={sliderCloseActions.onCancel}
+          onClose={sliderCloseActions.onClose}
+        />)}
+         {showWarningNotification && drugChartNoteAcknowledgement && (
+        <SideBarPanelClose
+          className="warning-notification"
+          open={true}
+          message={
+            <FormattedMessage
+              id="ACKNOWLEDGEMENT_WARNING_TEXT"
+              defaultMessage="You will lose the details entered. Do you want to continue?"
+            />
+          }
+          label={""}
+          primaryButtonText={<FormattedMessage id="NO" defaultMessage="No" />}
+          secondaryButtonText={
+            <FormattedMessage id="YES" defaultMessage="Yes" />
+          }
+          onSubmit={acknowledgementSliderCloseActions.onClose}
+          onSecondarySubmit={acknowledgementSliderCloseActions.onCancel}
+          onClose={acknowledgementSliderCloseActions.onClose}
         />
       )}
     </div>

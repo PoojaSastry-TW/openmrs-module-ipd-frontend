@@ -1,15 +1,16 @@
-import React from "react";
+import React,{useContext} from "react";
 import PropTypes from "prop-types";
-import { Tooltip } from "carbon-components-react";
+import { TooltipDefinition } from "carbon-components-react";
 import "../styles/TimeCell.scss";
 import SVGIcon from "./SVGIcon.jsx";
 import NoteIcon from "../../../../icons/note.svg";
 import { ifMedicationNotesPresent } from "../utils/DrugChartUtils";
 import { timeFormatFor24Hr } from "../../../../constants.js";
 import moment from "moment";
+//import { DrugChartSlotContext } from "../../../../context/DrugChartSlotContext.jsx";
 
 export default function TimeCell(props) {
-  const {
+    const {
     slotInfo = [],
     startTime = "",
     endTime = "",
@@ -17,7 +18,11 @@ export default function TimeCell(props) {
     highlightedCell,
     isBlank,
     isWholeHourStartTime,
+    onIconClick,
+    rowData,
   } = props;
+  //const { onSlotClick, onSlotClickForAcknowledgement, drugAmendmentNote } = useContext(DrugChartSlotContext);
+
   const left = [],
     right = [];
   slotInfo.map((slot) => {
@@ -41,7 +46,7 @@ export default function TimeCell(props) {
     }
   });
 
-  const icon = (
+  const renderNoteIcon = () => (
     <div className="note-icon-container">
       <NoteIcon />
     </div>
@@ -63,14 +68,36 @@ export default function TimeCell(props) {
       >
         {left.map((slot) => {
           const { status, administrationInfo, notes, minutes } = slot;
+          const handleClick = () => onIconClick && onIconClick(slot);
+          /*//Trial code for amendment vs acknowledgement click handling
+            const handleClick = (slot) => {
+    // First, handle the existing onIconClick functionality
+    if (onIconClick) {
+      onIconClick(slot);
+    }
+
+    // Then, handle the context-based slot click logic
+    if (drugAmendmentNote === false) {
+      onSlotClickForAcknowledgement?.(slot, rowData);
+    } else {
+      onSlotClick?.(slot, rowData);
+    }
+  }; */
           return (
-            <div key={minutes}>
-              <SVGIcon iconType={status} info={administrationInfo} />
+            <div
+              key={minutes}
+              onClick={() => handleClick(slot)}
+              style={onIconClick ? { cursor: "pointer" } : {}}
+            >
+              <SVGIcon
+                iconType={status}
+                info={administrationInfo}
+              />
               {ifMedicationNotesPresent(notes, status) && (
                 <span data-testid="left-notes">
-                  <Tooltip autoOrientation={true} renderIcon={() => icon}>
-                    {notes}
-                  </Tooltip>
+                  <TooltipDefinition tooltipText={notes}>
+                    {renderNoteIcon()}
+                  </TooltipDefinition>
                 </span>
               )}
             </div>
@@ -88,14 +115,36 @@ export default function TimeCell(props) {
         >
           {right.map((slot) => {
             const { status, administrationInfo, notes, minutes } = slot;
+            const handleClick = () => onIconClick && onIconClick(slot);
+             /*//Trial code for amendment vs acknowledgement click handling
+            const handleClick = (slot) => {
+    // First, handle the existing onIconClick functionality
+    if (onIconClick) {
+      onIconClick(slot);
+    }
+
+    // Then, handle the context-based slot click logic
+    if (drugAmendmentNote === false) {
+      onSlotClickForAcknowledgement?.(slot, rowData);
+    } else {
+      onSlotClick?.(slot, rowData);
+    }
+  }; */
             return (
-              <div key={minutes}>
-                <SVGIcon iconType={status} info={administrationInfo} />
+              <div
+                key={minutes}
+                onClick={handleClick}
+                style={onIconClick ? { cursor: "pointer" } : {}}
+              >
+                <SVGIcon
+                  iconType={status}
+                  info={administrationInfo}
+                />
                 {ifMedicationNotesPresent(notes, status) && (
                   <span data-testid="right-notes">
-                    <Tooltip autoOrientation={true} renderIcon={() => icon}>
-                      {notes}
-                    </Tooltip>
+                    <TooltipDefinition tooltipText={notes}>
+                      {renderNoteIcon()}
+                    </TooltipDefinition>
                   </span>
                 )}
               </div>
@@ -117,4 +166,6 @@ TimeCell.propTypes = {
   endTime: PropTypes.object,
   isBlank: PropTypes.bool,
   isWholeHourStartTime: PropTypes.bool,
+  onIconClick: PropTypes.func,
+  rowData: PropTypes.object, // Added prop type for rowData
 };

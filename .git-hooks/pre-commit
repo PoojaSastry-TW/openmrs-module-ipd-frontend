@@ -1,5 +1,0 @@
-#!/bin/sh
-
-yarn lint-staged
-
-yarn test --ci

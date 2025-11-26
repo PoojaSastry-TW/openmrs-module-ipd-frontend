@@ -3,11 +3,13 @@ import PropTypes from "prop-types";
 import TimeCell from "./TimeCell.jsx";
 import { areDatesSame, formatDate } from "../../../../utils/DateTimeUtils.js";
 import { IPDContext } from "../../../../context/IPDContext";
+import { DrugChartSlotContext } from "../../../../context/DrugChartSlotContext";
 import { timeFormatFor12Hr, timeFormatFor24Hr } from "../../../../constants";
 import moment from "moment";
 
 export default function CalendarRow(props) {
   const { config } = useContext(IPDContext);
+  const { onSlotClick } = useContext(DrugChartSlotContext);
   const { enable24HourTime = {}, shiftDetails: shiftConfig = {} } = config;
   const { rowData, currentShiftArray, selectedDate, shiftIndex } = props;
   const { slots } = rowData;
@@ -61,6 +63,7 @@ export default function CalendarRow(props) {
       time,
       status: administrationSummary.status,
       ...adminInfo,
+      originalSlot: slot,
     });
   });
   return (
@@ -79,6 +82,12 @@ export default function CalendarRow(props) {
           date.diff(shiftArrayTime) < nextShiftArrayTime.diff(date)
             ? "left"
             : "right";
+        const handleIconClick = (slotData) => {
+          if (onSlotClick && slotData.originalSlot) {
+            onSlotClick(slotData.originalSlot, rowData);
+          }
+        };
+
         if (transformedData[shiftArrayTime.hour()]) {
           return (
             <TimeCell
@@ -90,6 +99,7 @@ export default function CalendarRow(props) {
               highlightedCell={highlightedCell}
               isBlank={index === currentShiftArray.length - 1 && hasMinutes}
               isWholeHourStartTime={isWholeHourStartTime}
+              onIconClick={handleIconClick}
             />
           );
         }

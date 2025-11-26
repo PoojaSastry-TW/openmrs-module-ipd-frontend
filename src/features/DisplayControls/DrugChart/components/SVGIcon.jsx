@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { Tooltip } from "carbon-components-react";
+import { TooltipDefinition } from "carbon-components-react";
 import AdministeredIcon from "../../../../icons/completed.svg";
 import AdministeredLateIcon from "../../../../icons/administered-late.svg";
 import LateIcon from "../../../../icons/late.svg";
@@ -11,23 +11,24 @@ import "../styles/SVGIcon.scss";
 
 export default function SVGIcon(props) {
   const { iconType, info } = props;
-  let icon,
-    clickable = false;
+  let icon;
+  let showTooltip = false;
+
   switch (iconType) {
     case "Administered":
       icon = <AdministeredIcon />;
-      clickable = true;
+      showTooltip = true;
       break;
     case "Not-Administered":
       icon = <NotAdministeredIcon />;
-      clickable = true;
+      showTooltip = true;
       break;
     case "Late":
       icon = <LateIcon />;
       break;
     case "Administered-Late":
       icon = <AdministeredLateIcon />;
-      clickable = true;
+      showTooltip = true;
       break;
     case "Stopped":
       icon = <StoppedIcon />;
@@ -38,10 +39,10 @@ export default function SVGIcon(props) {
 
   return (
     <div>
-      {info && clickable ? (
-        <Tooltip autoOrientation={true} renderIcon={() => icon}>
-          {info}
-        </Tooltip>
+      {info && showTooltip ? (
+        <TooltipDefinition tooltipText={info}>
+          {icon}
+        </TooltipDefinition>
       ) : (
         icon
       )}
